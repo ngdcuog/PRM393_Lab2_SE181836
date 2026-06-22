@@ -231,12 +231,24 @@ class _DetailScreenState extends State<DetailScreen> {
       if (!mounted) return;
 
       if (!launched) {
-        await launchUrl(uri, mode: LaunchMode.inAppWebView);
+        final fallback = await launchUrl(uri, mode: LaunchMode.inAppWebView);
+        if (!mounted) return;
+        if (!fallback) {
+          messenger.showSnackBar(
+            const SnackBar(content: Text('Could not open link in WebView')),
+          );
+        }
       }
     } catch (_) {
       if (!mounted) return;
       try {
-        await launchUrl(uri, mode: LaunchMode.inAppWebView);
+        final fallback = await launchUrl(uri, mode: LaunchMode.inAppWebView);
+        if (!mounted) return;
+        if (!fallback) {
+          messenger.showSnackBar(
+            const SnackBar(content: Text('Could not open link in WebView')),
+          );
+        }
       } catch (e) {
         messenger.showSnackBar(
           SnackBar(content: Text('Could not open link: $e')),

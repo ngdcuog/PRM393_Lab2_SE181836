@@ -11,6 +11,11 @@ class Publication {
     this.journalName,
     this.doi,
     this.abstractText,
+    this.isOpenAccess = false,
+    this.oaUrl,
+    this.type = 'article',
+    this.primaryTopic,
+    this.field,
   });
 
   final String id;
@@ -21,6 +26,11 @@ class Publication {
   final String? doi;
   final String? abstractText;
   final List<String> authors;
+  final bool isOpenAccess;
+  final String? oaUrl;
+  final String type;
+  final String? primaryTopic;
+  final String? field;
 
   factory Publication.fromJson(Map<String, dynamic> json) {
     // Parse authors from authorships array
@@ -47,6 +57,8 @@ class Publication {
     final journalName =
         source is Map ? source['display_name']?.toString() : null;
 
+    final primaryTopicNode = json['primary_topic'] as Map<String, dynamic>?;
+
     return Publication(
       id: json['id']?.toString() ?? '',
       title: json['title']?.toString() ?? 'No title',
@@ -56,6 +68,12 @@ class Publication {
       journalName: journalName,
       abstractText: abstractText,
       authors: authors,
+      isOpenAccess: json['open_access']?['is_oa'] ?? false,
+      oaUrl: json['open_access']?['oa_url']?.toString(),
+      type: json['type']?.toString() ?? 'article',
+      primaryTopic: primaryTopicNode?['display_name']?.toString(),
+      field: primaryTopicNode?['field']?['display_name']?.toString(),
     );
   }
 }
+

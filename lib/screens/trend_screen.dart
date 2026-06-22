@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../providers/search_provider.dart';
+import '../services/pdf_export_service.dart' as import_pdf;
+import '../models/dashboard_data.dart' as import_dashboard;
+import '../viewmodels/home_viewmodel.dart';
 import '../widgets/trend_bar_chart.dart';
 
 /// Screen displaying publication trend analysis for the searched topic.
@@ -10,7 +12,7 @@ class TrendScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<SearchProvider>(
+    return Consumer<HomeViewModel>(
       builder: (context, provider, _) {
         final theme = Theme.of(context);
         final colorScheme = theme.colorScheme;
@@ -110,6 +112,35 @@ class TrendScreen extends StatelessWidget {
             return ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                // ─── Topic Breadcrumbs ─────────────────────────────────────────
+                if (provider.topicBreadcrumbs.isNotEmpty) ...[
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: provider.topicBreadcrumbs.asMap().entries.map((entry) {
+                      final isLast = entry.key == provider.topicBreadcrumbs.length - 1;
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            entry.value,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isLast ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                              fontWeight: isLast ? FontWeight.bold : FontWeight.normal,
+                            ),
+                          ),
+                          if (!isLast)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              child: Icon(Icons.chevron_right, size: 14, color: colorScheme.onSurfaceVariant),
+                            ),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
                 // ─── Chart card ───────────────────────────────────────────────
                 Card(
                   shape: RoundedRectangleBorder(
@@ -174,57 +205,170 @@ class TrendScreen extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
-                // ─── Most influential papers ───────────────────────────────────
-                Text(
-                  'Most Influential Papers',
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 10),
-                ...provider.publications
-                    .take(5)
-                    .toList()
-                    .asMap()
-                    .entries
-                    .map((entry) {
-                  final rank = entry.key + 1;
-                  final pub = entry.value;
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: rank == 1
-                            ? Colors.amber
-                            : colorScheme.primaryContainer,
-                        child: Text(
-                          '$rank',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: rank == 1
-                                ? Colors.white
-                                : colorScheme.onPrimaryContainer,
+                // ─── Must-Read Papers ──────────────────────────────────────────
+                if (provider.mustReadPapers.isNotEmpty) ...[
+                  Text(
+                    'Must-Read Papers',
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+                  ...provider.mustReadPapers
+                      .take(5)
+                      .toList()
+                      .asMap()
+                      .entries
+                      .map((entry) {
+                    final rank = entry.key + 1;
+                    final pub = entry.value;
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: rank == 1
+                              ? Colors.amber
+                              : colorScheme.primaryContainer,
+                          child: Text(
+                            '$rank',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: rank == 1
+                                  ? Colors.white
+                                  : colorScheme.onPrimaryContainer,
+                            ),
                           ),
                         ),
+                        title: Text(
+                          pub.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w600),
+                        ),
+                        subtitle: Text(
+                          '${pub.citationCount} citations · ${pub.year} ${pub.isOpenAccess ? '· 🔓 OA' : ''}',
+                          style: TextStyle(
+                              color: colorScheme.onSurfaceVariant, fontSize: 12),
+                        ),
+                        onTap: () =>
+                            Navigator.of(context).pushNamed('/detail', arguments: pub),
                       ),
-                      title: Text(
-                        pub.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            fontSize: 13, fontWeight: FontWeight.w600),
+                    );
+                  }),
+                  const SizedBox(height: 20),
+                ],
+
+                // ─── Rising Papers ─────────────────────────────────────────────
+                if (provider.risingPapers.isNotEmpty) ...[
+                  Row(
+                    children: [
+                      const Icon(Icons.local_fire_department, color: Colors.deepOrange, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Rising Papers (Trending)',
+                        style: theme.textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
-                      subtitle: Text(
-                        '${pub.citationCount} citations · ${pub.year}',
-                        style: TextStyle(
-                            color: colorScheme.onSurfaceVariant, fontSize: 12),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  ...provider.risingPapers
+                      .take(5)
+                      .toList()
+                      .map((pub) {
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      child: ListTile(
+                        title: Text(
+                          pub.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w600),
+                        ),
+                        subtitle: Text(
+                          '${pub.citationCount} citations · ${pub.year}',
+                          style: TextStyle(
+                              color: colorScheme.onSurfaceVariant, fontSize: 12),
+                        ),
+                        trailing: const Icon(Icons.trending_up, color: Colors.green),
+                        onTap: () =>
+                            Navigator.of(context).pushNamed('/detail', arguments: pub),
                       ),
-                      onTap: () =>
-                          Navigator.of(context).pushNamed('/detail', arguments: pub),
+                    );
+                  }),
+                  const SizedBox(height: 20),
+                ],
+
+                // ─── Key Authors ───────────────────────────────────────────────
+                if (provider.topAuthors.isNotEmpty) ...[
+                  Text(
+                    'Key Authors to Follow',
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    height: 140,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: provider.topAuthors.length > 5 ? 5 : provider.topAuthors.length,
+                      itemBuilder: (context, index) {
+                        final author = provider.topAuthors[index];
+                        return Container(
+                          width: 120,
+                          margin: const EdgeInsets.only(right: 12),
+                          child: Card(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(12),
+                              onTap: () {
+                                Navigator.of(context).pushNamed('/author', arguments: author.id);
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 24,
+                                      backgroundColor: colorScheme.tertiaryContainer,
+                                      child: Text(
+                                        author.name.substring(0, 1).toUpperCase(),
+                                        style: TextStyle(
+                                          color: colorScheme.onTertiaryContainer,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 20,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      author.name,
+                                      textAlign: TextAlign.center,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                  );
-                }),
+                  ),
+                ],
               ],
             );
           }(),

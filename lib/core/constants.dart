@@ -17,7 +17,7 @@ class AppConstants {
     'Software Engineering',
   ];
 
-  static const int requestTimeoutSeconds = 15;
+  static const int requestTimeoutSeconds = 30;
   static const int perPage = 25;
   static const int analyticsPerPage = 10;
   static const int trendPerPage = 100;

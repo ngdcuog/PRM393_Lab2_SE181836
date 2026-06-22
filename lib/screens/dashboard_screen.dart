@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../providers/search_provider.dart';
+import '../viewmodels/home_viewmodel.dart';
 import '../widgets/stat_summary_card.dart';
 
 /// Dashboard screen showing aggregated statistics for the searched topic.
@@ -10,7 +10,7 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<SearchProvider>(
+    return Consumer<HomeViewModel>(
       builder: (context, provider, _) {
         final theme = Theme.of(context);
         final colorScheme = theme.colorScheme;
@@ -48,15 +48,49 @@ class DashboardScreen extends StatelessWidget {
           );
         }
 
-        final mostCitedTitle =
-            provider.mostCitedPaper?.title ?? '-';
         final avgCitation =
             provider.avgCitation.toStringAsFixed(2);
         final mostActiveYear = provider.mostActiveYear > 0
             ? '${provider.mostActiveYear}'
             : '-';
 
+        // OA Stats
+        final totalPubs = provider.publications.length;
+        final oaCount = provider.publications.where((p) => p.isOpenAccess).length;
+        final oaPercent = totalPubs > 0 ? (oaCount / totalPubs * 100).toStringAsFixed(1) : '0';
+        final oaLabel = '$oaPercent% OA';
+
+        // Research Compass
+        String compassStatus = 'Stable';
+        Color compassColor = Colors.grey;
+        if (provider.trendData.length >= 2) {
+          final lastYear = provider.trendData[provider.trendData.length - 1];
+          final prevYear = provider.trendData[provider.trendData.length - 2];
+          if (lastYear.count > prevYear.count) {
+            compassStatus = '🔥 HOT';
+            compassColor = Colors.deepOrange;
+          } else if (lastYear.count < prevYear.count) {
+            compassStatus = '❄️ Cooling';
+            compassColor = Colors.blue;
+          }
+        } else if (provider.trendData.isNotEmpty) {
+           compassStatus = '🔥 HOT';
+           compassColor = Colors.deepOrange;
+        }
+
         final cards = [
+          _CardData(
+            icon: '🧭',
+            label: 'Research Compass',
+            value: compassStatus,
+            color: compassColor,
+          ),
+          _CardData(
+            icon: '🔓',
+            label: 'Open Access',
+            value: oaLabel,
+            color: Colors.green,
+          ),
           _CardData(
             icon: '📄',
             label: 'Total Publications',
@@ -80,18 +114,6 @@ class DashboardScreen extends StatelessWidget {
             label: 'Top Journal',
             value: provider.topJournal,
             color: Colors.teal,
-          ),
-          _CardData(
-            icon: '👤',
-            label: 'Top Author',
-            value: provider.topAuthor,
-            color: colorScheme.secondary,
-          ),
-          _CardData(
-            icon: '🏆',
-            label: 'Most Cited',
-            value: mostCitedTitle,
-            color: Colors.deepOrange,
           ),
         ];
 

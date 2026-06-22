@@ -3,7 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../core/constants.dart';
-import '../providers/search_provider.dart';
+import '../viewmodels/home_viewmodel.dart';
+import '../widgets/filter_bottom_sheet.dart';
 import '../widgets/publication_card.dart';
 
 /// Main search screen with a pinned search bar and scrollable results list.
@@ -33,7 +34,7 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   void _onScroll() {
-    final provider = context.read<SearchProvider>();
+    final provider = context.read<HomeViewModel>();
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
       provider.loadMore();
@@ -43,7 +44,7 @@ class _SearchScreenState extends State<SearchScreen> {
   void _search(String topic) {
     if (topic.trim().isEmpty) return;
     _searchController.text = topic;
-    context.read<SearchProvider>().search(topic.trim());
+    context.read<HomeViewModel>().search(topic.trim());
     FocusScope.of(context).unfocus();
   }
 
@@ -174,7 +175,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
           // ─── Scrollable results (only this part scrolls) ───────────────────
           Expanded(
-            child: Consumer<SearchProvider>(
+            child: Consumer<HomeViewModel>(
               builder: (context, provider, _) {
                 switch (provider.status) {
                   case SearchStatus.idle:
@@ -236,6 +237,28 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
           ),
         ],
+      ),
+      floatingActionButton: Consumer<HomeViewModel>(
+        builder: (context, provider, _) {
+          if (provider.currentTopic.isEmpty) return const SizedBox.shrink();
+          
+          final hasFilters = provider.filterOptions.openAccessOnly || 
+                             provider.filterOptions.domainId != null || 
+                             provider.filterOptions.sortBy != 'relevance_score:desc';
+
+          return FloatingActionButton.extended(
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (context) => const FilterBottomSheet(),
+              );
+            },
+            icon: Icon(hasFilters ? Icons.filter_alt : Icons.filter_alt_outlined),
+            label: const Text('Filters'),
+          );
+        },
       ),
     );
   }

@@ -43,10 +43,10 @@ class PublicationCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 10),
-              // Meta row: year | citations | journal
+              // Meta row: year | citations | journal | etc
               Wrap(
                 spacing: 8,
-                runSpacing: 4,
+                runSpacing: 8,
                 children: [
                   _MetaChip(
                     icon: Icons.calendar_today_outlined,
@@ -58,12 +58,36 @@ class PublicationCard extends StatelessWidget {
                     label: '${publication.citationCount} citations',
                     color: colorScheme.tertiary,
                   ),
+                  if (publication.isOpenAccess)
+                    const _MetaChip(
+                      icon: Icons.lock_open_rounded,
+                      label: 'Open Access',
+                      color: Colors.green,
+                    ),
+                  if (publication.doi != null)
+                    _MetaChip(
+                      icon: Icons.link_rounded,
+                      label: 'DOI',
+                      color: colorScheme.secondary,
+                    ),
+                  _MetaChip(
+                    icon: Icons.article_outlined,
+                    label: publication.type.toUpperCase(),
+                    color: Colors.deepPurple,
+                  ),
                   if (publication.journalName != null)
                     _MetaChip(
                       icon: Icons.library_books_outlined,
                       label: publication.journalName!,
                       color: colorScheme.secondary,
-                      maxWidth: 160,
+                      maxWidth: 200,
+                    ),
+                  if (publication.field != null)
+                    _MetaChip(
+                      icon: Icons.category_outlined,
+                      label: publication.field!,
+                      color: Colors.blueGrey,
+                      maxWidth: 200,
                     ),
                 ],
               ),
